@@ -69,6 +69,9 @@ PERCLOS_WINDOW_S: float = 60.0
 # Durée minimale entre deux bâillements comptés
 YAWN_COOLDOWN_S: float = 3.0
 
+# Les bâillements n'entretiennent la vigilance que pendant cette fenêtre.
+YAWN_ALERT_WINDOW_S: float = 30.0
+
 # Durée minimale d'un bâillement (MAR au-dessus du seuil)
 YAWN_MIN_DURATION_S: float = 0.5
 
@@ -185,4 +188,4 @@ CAMERA_WIDTH: int = 640
 CAMERA_HEIGHT: int = 480
 
 # FPS cible
-CAMERA_FPS: int = 30
+CAMERA_FPS: int = 15

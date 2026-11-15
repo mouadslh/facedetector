@@ -96,6 +96,7 @@ class DrowsinessState:
         self._yawn_last_seen: float | None = None
         self._yawn_count: int = 0
         self._last_yawn_end: float = -float("inf")
+        self._recent_yawn_times: deque[float] = deque()
 
         # Micro-sommeils
         self._microsleep_count: int = 0
@@ -142,6 +143,11 @@ class DrowsinessState:
 
         # --- Bâillements ---
         yawn_detected = self._update_yawns(is_yawning, timestamp)
+        if yawn_detected:
+            self._recent_yawn_times.append(timestamp)
+        yawn_cutoff = timestamp - config.YAWN_ALERT_WINDOW_S
+        while self._recent_yawn_times and self._recent_yawn_times[0] < yawn_cutoff:
+            self._recent_yawn_times.popleft()
 
         # --- Score ---
         score = self._compute_score(ear, perclos, mar, pitch, closed_duration)
@@ -169,8 +175,8 @@ class DrowsinessState:
         if yawn_detected:
             reasons.append("bâillement")
 
-        if self._yawn_count >= 3:
-            reasons.append(f"{self._yawn_count} bâillements")
+        if len(self._recent_yawn_times) >= 3:
+            reasons.append(f"{len(self._recent_yawn_times)} bâillements récents")
             if level == AlertLevel.NORMAL:
                 level = AlertLevel.VIGILANCE
 
@@ -326,6 +332,7 @@ class DrowsinessState:
         self._yawn_active = False
         self._yawn_start = None
         self._yawn_count = 0
+        self._recent_yawn_times.clear()
         self._last_yawn_end = 0.0
         self._microsleep_count = 0
         self._microsleep_confirmed = False
