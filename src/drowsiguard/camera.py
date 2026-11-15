@@ -15,8 +15,8 @@ import os
 import cv2
 import numpy as np
 
-# Évite le blocage d'autorisation dans les threads secondaires sous macOS
-os.environ.setdefault("OPENCV_AVFOUNDATION_SKIP_AUTH", "1")
+# Laisser OpenCV déclencher la demande d'autorisation webcam de macOS.
+os.environ.setdefault("OPENCV_AVFOUNDATION_SKIP_AUTH", "0")
 
 from drowsiguard import config
 
