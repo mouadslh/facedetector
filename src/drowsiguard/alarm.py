@@ -18,8 +18,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Chemins des fichiers audio (générés par scripts/generate_sounds.py)
-ASSETS_DIR = Path("assets")
+# Chemins absolus des fichiers audio (générés par scripts/generate_sounds.py)
+ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 SOUND_LOW = ASSETS_DIR / "alert_low.wav"
 SOUND_HIGH = ASSETS_DIR / "alert_high.wav"
 
@@ -86,6 +86,24 @@ class AlarmManager:
     @muted.setter
     def muted(self, value: bool) -> None:
         self._muted = value
+
+    @property
+    def audio_available(self) -> bool:
+        """Indique si un moteur audio a été initialisé."""
+        return self._pygame_ok or self._afplay_ok
+
+    def test_sound(self, level: str) -> bool:
+        """Joue un son de test (``low`` ou ``high``), sans cooldown d'alerte."""
+        if level not in {"low", "high"}:
+            raise ValueError("level doit être 'low' ou 'high'")
+        path = SOUND_LOW if level == "low" else SOUND_HIGH
+        sound = self._sounds.get(level)
+        if not path.is_file() or not self.audio_available:
+            return False
+        if self._pygame_ok and sound is None and not self._afplay_ok:
+            return False
+        threading.Thread(target=self._play, args=(sound, path), daemon=True).start()
+        return True
 
     def alert_vigilance(self, timestamp: float | None = None) -> None:
         """

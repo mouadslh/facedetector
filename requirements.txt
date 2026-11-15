@@ -12,11 +12,12 @@ streamlit==1.40.2
 # Visualisation
 plotly==5.24.1
 
-# Audio (sur macOS, afplay natif est utilisé automatiquement sans pygame ; pygame est optionnel)
-# pygame>=2.6.0
+# Audio (lecture des alertes locales sur macOS et Windows)
+pygame==2.6.1
 
 # Calcul numérique
 numpy==1.26.4
+pyarrow==17.0.0
 scipy==1.13.1
 
 # Base de données

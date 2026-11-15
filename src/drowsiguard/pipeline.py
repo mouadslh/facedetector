@@ -364,6 +364,10 @@ class Pipeline:
         self._muted = muted
         self._alarm.muted = muted
 
+    def test_alarm(self, level: str) -> bool:
+        """Joue un son de test pour vérifier la sortie audio locale."""
+        return self._alarm.test_sound(level)
+
     def close(self) -> None:
         """Libère toutes les ressources."""
         self._detector.close()

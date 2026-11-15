@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import sys
 import time
+import inspect
 from pathlib import Path
 
 import cv2
@@ -52,6 +53,13 @@ st.set_page_config(
 
 # Injection de la charte CSS
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
+
+# Streamlit renamed this image sizing option in newer releases.
+_IMAGE_WIDTH_OPTION = (
+    "use_container_width"
+    if "use_container_width" in inspect.signature(st.image).parameters
+    else "use_column_width"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +165,15 @@ with st.container(border=True):
                 st.session_state["muted"] = muted
                 if st.session_state["pipeline"] is not None:
                     st.session_state["pipeline"].set_muted(muted)
+
+            if not muted:
+                with st.expander("Tester les sons"):
+                    if st.button("Tester l'alerte vigilance", use_container_width=True):
+                        if not st.session_state["pipeline"].test_alarm("low"):
+                            st.warning("Son indisponible. Vérifiez que pygame est installé et que les fichiers WAV existent dans assets/.")
+                    if st.button("Tester l'alerte danger", use_container_width=True):
+                        if not st.session_state["pipeline"].test_alarm("high"):
+                            st.warning("Son indisponible. Vérifiez que pygame est installé et que les fichiers WAV existent dans assets/.")
 
             st.subheader("Calibration")
 
@@ -327,7 +344,7 @@ while st.session_state["camera_running"]:
 
     # 2. Flux caméra (rafraîchi à chaque frame)
     rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-    video_ph.image(rgb, channels="RGB", use_column_width=True)
+    video_ph.image(rgb, channels="RGB", **{_IMAGE_WIDTH_OPTION: True})
 
     # Statut qualité sous la vidéo
     with quality_ph.container():
