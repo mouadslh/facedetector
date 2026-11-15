@@ -1,0 +1,6 @@
+# Ce dossier contient les fichiers audio générés par scripts/generate_sounds.py :
+# - alert_low.wav  : bip grave (440 Hz) — niveau Vigilance
+# - alert_high.wav : double bip aigu (880 Hz) — niveau Danger
+#
+# Pour générer les sons : python scripts/generate_sounds.py
+# Les fichiers WAV sont exclus du dépôt Git (.gitignore).

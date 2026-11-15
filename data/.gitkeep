@@ -1,0 +1,6 @@
+# Ce dossier contient les données utilisateur générées automatiquement :
+# - profile.json  : profil calibré de l'utilisateur
+# - events.db     : journal SQLite des événements de somnolence
+# - export.csv    : exports manuels (optionnel)
+#
+# Ces fichiers sont exclus du dépôt Git (.gitignore).

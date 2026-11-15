@@ -1,0 +1,52 @@
+# Environnement virtuel
+venv/
+.venv/
+env/
+
+# Données utilisateur (profil, journal)
+data/profile.json
+data/events.db
+data/*.csv
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
+
+# Assets générés (recréables avec generate_sounds.py)
+assets/*.wav
+
+# Couverture de tests
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Variables d'environnement
+.env

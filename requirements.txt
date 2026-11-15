@@ -1,0 +1,31 @@
+# DrowsiGuard — dépendances épinglées
+# Python 3.10 à 3.12, Mac Apple Silicon, CPU uniquement
+# Installation : pip install -r requirements.txt
+
+# Vision par ordinateur
+mediapipe==0.10.30
+opencv-python-headless==4.10.0.84
+
+# Interface utilisateur
+streamlit==1.40.2
+streamlit-webrtc>=0.63,<1.0
+
+# Visualisation
+plotly==5.24.1
+
+# Audio (sur macOS, afplay natif est utilisé automatiquement sans pygame ; pygame est optionnel)
+# pygame>=2.6.0
+
+# Calcul numérique
+numpy==1.26.4
+scipy==1.13.1
+
+# Base de données
+# sqlite3 est inclus dans la bibliothèque standard Python
+
+# Tests
+pytest==8.3.3
+pytest-cov==6.0.0
+
+# Utilitaires
+python-dateutil==2.9.0
