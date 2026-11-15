@@ -327,7 +327,7 @@ while st.session_state["camera_running"]:
 
     # 2. Flux caméra (rafraîchi à chaque frame)
     rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-    video_ph.image(rgb, channels="RGB", width="stretch")
+    video_ph.image(rgb, channels="RGB", use_column_width=True)
 
     # Statut qualité sous la vidéo
     with quality_ph.container():
@@ -380,18 +380,18 @@ while st.session_state["camera_running"]:
         thr = status.thresholds
         if st.session_state["ear_history"]:
             fig_ear = ear_chart(st.session_state["ear_history"], thr)
-            g1_ph.plotly_chart(fig_ear, width="stretch", config=PLOTLY_CONFIG)
+            g1_ph.plotly_chart(fig_ear, use_container_width=True, config=PLOTLY_CONFIG)
 
         if st.session_state["mar_history"]:
             fig_mar = mar_chart(st.session_state["mar_history"], thr)
-            g2_ph.plotly_chart(fig_mar, width="stretch", config=PLOTLY_CONFIG)
+            g2_ph.plotly_chart(fig_mar, use_container_width=True, config=PLOTLY_CONFIG)
 
         if st.session_state["score_history"]:
             fig_ps = perclos_score_chart(
                 st.session_state["perclos_history"],
                 st.session_state["score_history"],
             )
-            g3_ph.plotly_chart(fig_ps, width="stretch", config=PLOTLY_CONFIG)
+            g3_ph.plotly_chart(fig_ps, use_container_width=True, config=PLOTLY_CONFIG)
 
     # 5. Journal des événements (toutes les 40 frames)
     if _frame_count % 40 == 0:
@@ -411,6 +411,6 @@ while st.session_state["camera_running"]:
                     }
                 )
             with hist_ph.container():
-                st.dataframe(rows, width="stretch", hide_index=True)
+                st.dataframe(rows, use_container_width=True, hide_index=True)
 
     time.sleep(0.01)
