@@ -13,17 +13,15 @@ from __future__ import annotations
 
 import sys
 import time
-import threading
-import uuid
 from pathlib import Path
 
+import cv2
 import streamlit as st
-import av
-from streamlit_webrtc import webrtc_streamer, WebRtcMode
 
 # Ajouter src/ au path Python
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+from drowsiguard.camera import CameraCapture, CameraError
 from drowsiguard.logger import EventLogger
 from drowsiguard.pipeline import Pipeline
 from drowsiguard.profile import load_profile
@@ -63,11 +61,10 @@ st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 
 def _init_session() -> None:
     defaults = {
-        "session_id": uuid.uuid4().hex,
-        "frame_state": {"lock": threading.Lock(), "status": None, "frame_count": 0, "error": None},
+        "camera": None,
         "pipeline": None,
         "sensitivity": "Normale",
-        "muted": True,
+        "muted": False,
         "camera_running": False,
         "recalibrate": False,
         "profile_choice_done": False,
@@ -94,26 +91,32 @@ _init_session()
 
 
 def _start_camera() -> None:
+    cam: CameraCapture | None = None
     try:
-        session_dir = Path("data/sessions") / st.session_state["session_id"]
-        session_dir.mkdir(parents=True, exist_ok=True)
+        cam = CameraCapture()
+        cam.open()
+        st.session_state["camera"] = cam
         st.session_state["pipeline"] = Pipeline(
             sensitivity=st.session_state["sensitivity"],
-            muted=True,  # L'audio du serveur ne doit jamais alerter d'autres élèves.
-            profile_path=session_dir / "profile.json",
-            db_path=session_dir / "events.db",
+            muted=st.session_state["muted"],
         )
         st.session_state["camera_running"] = True
         st.session_state["camera_error"] = None
         if st.session_state["session_start"] is None:
             st.session_state["session_start"] = time.time()
     except Exception as exc:
+        if cam is not None:
+            cam.release()
+        st.session_state["camera"] = None
         st.session_state["pipeline"] = None
         st.session_state["camera_error"] = str(exc)
         st.session_state["camera_running"] = False
 
 
 def _stop_camera() -> None:
+    if st.session_state["camera"] is not None:
+        st.session_state["camera"].release()
+        st.session_state["camera"] = None
     if st.session_state["pipeline"] is not None:
         st.session_state["pipeline"].close()
         st.session_state["pipeline"] = None
@@ -149,7 +152,11 @@ with st.container(border=True):
                 if st.session_state["pipeline"] is not None:
                     st.session_state["pipeline"].set_sensitivity(sensitivity)
 
-            st.caption("Les alertes sonores sont désactivées en mode hébergé pour ne pas jouer sur le serveur.")
+            muted = st.toggle("Mode silencieux (Muet)", value=st.session_state["muted"])
+            if muted != st.session_state["muted"]:
+                st.session_state["muted"] = muted
+                if st.session_state["pipeline"] is not None:
+                    st.session_state["pipeline"].set_muted(muted)
 
             st.subheader("Calibration")
 
@@ -167,14 +174,20 @@ with st.container(border=True):
 
             st.subheader("Contrôle caméra")
 
-            st.caption("La webcam se démarre depuis le lecteur vidéo. Cliquez sur Start et autorisez l'accès dans le navigateur.")
+            if st.session_state["camera_running"]:
+                if st.button("Arrêter la caméra", use_container_width=True):
+                    _stop_camera()
+                    st.rerun()
+            else:
+                if st.button("Démarrer la caméra", use_container_width=True):
+                    _start_camera()
+                    st.rerun()
 
             st.subheader("Données et export")
 
             try:
-                session_dir = Path("data/sessions") / st.session_state["session_id"]
-                logger_inst = EventLogger(session_dir / "events.db")
-                csv_file = logger_inst.export_csv(session_dir / "export.csv")
+                logger_inst = EventLogger()
+                csv_file = logger_inst.export_csv(Path("data/export.csv"))
                 logger_inst.close()
                 with open(csv_file, "rb") as f:
                     st.download_button(
@@ -187,7 +200,7 @@ with st.container(border=True):
             except Exception:
                 pass
 
-            st.caption("DrowsiGuard v0.3.0 · webcam du navigateur")
+            st.caption("DrowsiGuard v0.2.0 · 100 % local et privé")
 
 
 # ---------------------------------------------------------------------------
@@ -197,11 +210,16 @@ with st.container(border=True):
 if st.session_state["camera_error"]:
     st.error("**Erreur lors de l'ouverture de la webcam**")
     st.code(st.session_state["camera_error"])
-    st.info("La session n'a pas pu démarrer. Rechargez la page ou contactez l'enseignant.")
+    st.info(
+        "Vérifications recommandées :\n"
+        "• Autorisez le Terminal / Streamlit dans **Réglages Système → Confidentialité → Caméra**\n"
+        "• Fermez toute autre application susceptible d'utiliser la webcam (FaceTime, Zoom...)\n"
+        "• Branchez correctement votre caméra USB externe si applicable"
+    )
     st.stop()
 
 if not st.session_state["camera_running"]:
-    st.warning("La session est arrêtée. Rechargez la page pour recommencer.")
+    st.warning("La caméra est actuellement arrêtée. Ouvrez le menu **Contrôles** dans la barre de navigation pour reprendre.")
     st.stop()
 
 
@@ -210,10 +228,10 @@ if not st.session_state["camera_running"]:
 # ---------------------------------------------------------------------------
 
 pipeline: Pipeline = st.session_state["pipeline"]
+camera: CameraCapture = st.session_state["camera"]
 
 if not st.session_state["profile_choice_done"]:
-    session_dir = Path("data/sessions") / st.session_state["session_id"]
-    saved_profile = load_profile(session_dir / "profile.json")
+    saved_profile = load_profile()
     if saved_profile is not None:
         with st.container(border=True):
             st.subheader("Profil morphologique enregistré trouvé")
@@ -254,32 +272,7 @@ with col_stats:
 
 with col_cam:
     header_ph = st.empty()
-    def process_browser_frame(frame: av.VideoFrame) -> av.VideoFrame:
-        try:
-            image = frame.to_ndarray(format="bgr24")
-            annotated, status = pipeline.process(image)
-            state = frame_state
-            with state["lock"]:
-                state["status"] = status
-                state["frame_count"] += 1
-            return av.VideoFrame.from_ndarray(annotated, format="bgr24")
-        except Exception as exc:
-            state = frame_state
-            with state["lock"]:
-                state["error"] = str(exc)
-            return frame
-
-    frame_state = st.session_state["frame_state"]
-    rtc_config = {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
-    webrtc_streamer(
-        key=f"camera-{st.session_state['session_id']}",
-        mode=WebRtcMode.SENDRECV,
-        video_frame_callback=process_browser_frame,
-        rtc_configuration=rtc_config,
-        media_stream_constraints={"video": {"width": 640, "height": 480}, "audio": False},
-        async_processing=False,
-    )
-    camera_hint_ph = st.empty()
+    video_ph = st.empty()
     quality_ph = st.empty()
 
 with col_charts:
@@ -298,7 +291,6 @@ hist_ph = st.empty()
 # ---------------------------------------------------------------------------
 
 _frame_count = 0
-_last_ui_frame = 0
 _CHART_REFRESH = 6  # Rafraîchir Plotly toutes les ~200 ms pour une réactivité optimale sans freeze
 _PANEL_REFRESH = 3  # Rafraîchir les métriques numériques toutes les ~100 ms
 
@@ -306,23 +298,24 @@ consecutive_drops = 0
 MAX_CONSECUTIVE_DROPS = 30  # Tolérance aux micro-sauts de trames
 
 while st.session_state["camera_running"]:
-    state = st.session_state["frame_state"]
-    with state["lock"]:
-        status = state["status"]
-        _frame_count = state["frame_count"]
-        frame_error = state["error"]
-    if frame_error:
-        st.error(f"Erreur de traitement vidéo : {frame_error}")
-    if status is None:
-        camera_hint_ph.info("Cliquez sur Start dans le lecteur vidéo et autorisez l'accès à votre webcam.")
-        time.sleep(0.1)
+    ret, frame = camera.read()
+    if not ret or frame is None:
+        consecutive_drops += 1
+        if consecutive_drops >= MAX_CONSECUTIVE_DROPS:
+            st.error("Flux caméra indisponible après plusieurs tentatives. Vérifiez votre webcam.")
+            _stop_camera()
+            break
+        time.sleep(0.02)
         continue
-    camera_hint_ph.empty()
 
-    if _frame_count == _last_ui_frame:
-        time.sleep(0.03)
+    consecutive_drops = 0
+    try:
+        annotated, status = pipeline.process(frame)
+    except Exception:
+        time.sleep(0.01)
         continue
-    _last_ui_frame = _frame_count
+
+    _frame_count += 1
 
     session_dur = time.time() - (st.session_state["session_start"] or time.time())
 
@@ -331,6 +324,10 @@ while st.session_state["camera_running"]:
         sys_status = "SURVEILLANCE ACTIVE" if status.is_calibrated else "EN CALIBRATION"
         with header_ph.container():
             render_header(sys_status, session_dur)
+
+    # 2. Flux caméra (rafraîchi à chaque frame)
+    rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+    video_ph.image(rgb, channels="RGB", width="stretch")
 
     # Statut qualité sous la vidéo
     with quality_ph.container():
@@ -398,8 +395,7 @@ while st.session_state["camera_running"]:
 
     # 5. Journal des événements (toutes les 40 frames)
     if _frame_count % 40 == 0:
-        session_dir = Path("data/sessions") / st.session_state["session_id"]
-        log_reader = EventLogger(session_dir / "events.db")
+        log_reader = EventLogger()
         history = log_reader.get_history(limit=8)
         log_reader.close()
         if history:

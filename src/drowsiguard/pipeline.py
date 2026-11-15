@@ -70,18 +70,15 @@ class Pipeline:
         sensitivity: str = "Normale",
         muted: bool = False,
         on_profile_saved: Callable[[UserProfile], None] | None = None,
-        profile_path: Path | None = None,
-        db_path: Path | None = None,
     ) -> None:
         self._sensitivity = sensitivity
         self._muted = muted
         self._on_profile_saved = on_profile_saved
-        self._profile_path = profile_path
 
         # Composants
         self._detector = FaceMeshDetector()
         self._alarm = AlarmManager(muted=muted)
-        self._event_log = EventLogger(db_path) if db_path is not None else EventLogger()
+        self._event_log = EventLogger()
 
         # Calibration
         self._calibration = CalibrationEngine(on_done=self._on_calibration_done)
@@ -106,7 +103,7 @@ class Pipeline:
 
     def load_existing_profile(self) -> UserProfile | None:
         """Tente de charger le profil sauvegardé. Retourne None si absent."""
-        profile = load_profile(self._profile_path) if self._profile_path is not None else load_profile()
+        profile = load_profile()
         if profile is not None:
             self._apply_profile(profile)
         return profile
@@ -223,10 +220,7 @@ class Pipeline:
     def _on_calibration_done(self, profile: UserProfile) -> None:
         """Appelé par CalibrationEngine quand la calibration réussit."""
         self._apply_profile(profile)
-        if self._profile_path is not None:
-            save_profile(profile, self._profile_path)
-        else:
-            save_profile(profile)
+        save_profile(profile)
         if self._on_profile_saved:
             self._on_profile_saved(profile)
 

@@ -113,18 +113,28 @@ DrowsiGuard/
 
 ---
 
-## 🔒 Confidentialité en mode hébergé
+## 🔒 Confidentialité & Traitement 100% Local
 
-En mode hébergé, la webcam est activée dans le navigateur avec l'accord de l'élève, puis le flux vidéo est transmis au serveur par WebRTC pour le traitement. Les profils et journaux sont séparés par session et enregistrés sur le serveur. N'utilisez pas cette version avec des données sensibles sans informer les élèves et définir une politique de conservation. Pour un usage 100 % local, lancez l'application sur l'ordinateur concerné.
+Aucune image ni vidéo n'est transmise ni enregistrée sur le réseau. L'intégralité du traitement par vision par ordinateur et du diagnostic de fatigue s'exécute localement sur la machine de chaque élève.
 
-## 🌐 Déploiement pour une classe
+## 💻 Lancement facile pour les élèves
 
-L'application utilise `streamlit-webrtc` : chaque élève ouvre le lien, clique sur **Start** dans le lecteur vidéo et autorise la webcam. Le site doit être servi en HTTPS. Le serveur d'hébergement doit aussi autoriser le trafic WebRTC; certains réseaux scolaires ou hébergeurs filtrent les connexions vidéo, auquel cas un serveur TURN sera nécessaire.
+Partagez le dépôt GitHub : <https://github.com/mouadslh/facedetector>. Chaque élève installe Python 3.10, 3.11 ou 3.12, télécharge le projet et lance le script correspondant à son système. Le script installe les dépendances et démarre l'application.
 
-1. Publiez ce dépôt sur GitHub. Vérifiez que `assets/face_landmarker.task` est bien inclus.
-2. Créez une application Streamlit Community Cloud reliée au dépôt, avec `app.py` comme fichier principal.
-3. Dans les paramètres avancés, choisissez Python 3.11 (les dépendances de vision du projet ciblent Python 3.10–3.12).
-4. Attendez la fin de l'installation, puis partagez l'URL HTTPS générée.
-5. Demandez à chaque élève d'ouvrir le lien avec Chrome ou Edge, d'autoriser la caméra et d'appuyer sur **Start**.
+**macOS / Linux** — dans Terminal :
 
-Chaque session reçoit son propre identifiant temporaire pour isoler son profil et son journal. Les données écrites sur un hébergement éphémère peuvent disparaître lors d'un redémarrage. Pour une classe entière, faites d'abord un essai simultané avec quelques élèves : le traitement vidéo consomme des ressources CPU par personne connectée.
+```bash
+git clone https://github.com/mouadslh/facedetector.git
+cd facedetector
+bash scripts/run_local.sh
+```
+
+**Windows** — dans PowerShell ou l'Invite de commandes :
+
+```bat
+git clone https://github.com/mouadslh/facedetector.git
+cd facedetector
+scripts\run_local.bat
+```
+
+Au premier lancement, l'installation peut prendre quelques minutes. Ensuite, chaque élève ouvre l'adresse locale affichée par Streamlit et autorise sa webcam.

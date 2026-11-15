@@ -8,7 +8,6 @@ opencv-python-headless==4.10.0.84
 
 # Interface utilisateur
 streamlit==1.40.2
-streamlit-webrtc>=0.63,<1.0
 
 # Visualisation
 plotly==5.24.1
